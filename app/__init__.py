@@ -10,6 +10,13 @@ else:
     default_db = "sqlite+aiosqlite:///./ticket_system.db"
 
 DATABASE_URL = os.getenv("DATABASE_URL", default_db)
+
+# Ensure URLs from providers like Neon use the asyncpg driver
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 SECRET_KEY = os.getenv("SECRET_KEY", "a-very-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
