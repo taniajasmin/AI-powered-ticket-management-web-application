@@ -9,17 +9,17 @@ A full-stack ticket management system built with **FastAPI** and **vanilla HTML/
 ### Login / Register Page
 ![Login Page](screenshots/login.png)
 
-### Customer Dashboard
-![Customer Dashboard](screenshots/customer-dashboard.png)
+### Admin Pages
 
-### Customer Tickets List
-![Customer Tickets](screenshots/customer-tickets.png)
+| Admin Dashboard | User Management |
+|----------------|----------------|
+| ![Admin](screenshots/admin-dashboard.png) | ![Users](screenshots/admin-users.png) |
 
-### Admin Dashboard
-![Admin Dashboard](screenshots/admin-dashboard.png)
+### Customer Pages
 
-### Admin User Management
-![Admin Users](screenshots/admin-users.png)
+| Customer Dashboard | Customer Tickets |
+|-------------------|------------------|
+| ![Dashboard](screenshots/customer-dashboard.png) | ![Tickets](screenshots/customer-tickets.png) |
 
 ---
 
@@ -249,17 +249,10 @@ STATIC_DIR = BASE_DIR / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 ```
 
----
-
-### 4. Gemini API quota exceeded
-
-**Error:** Using `gemini-2.0-flash` hit the free-tier rate limit after a few requests, returning 429 errors.
-
-**Fix:** Switched to `gemini-2.5-flash-lite` which has a separate quota pool and higher free-tier limits. Also built in a robust keyword-based fallback classifier so the system keeps working even when the API is unavailable.
 
 ---
 
-### 5. JavaScript `event.target` undefined in onclick handler
+### 4. JavaScript `event.target` undefined in onclick handler
 
 **Error:** The login tab switching function used `event.target` without receiving `event` as a parameter. In some browser contexts, the implicit global `event` object is undefined.
 
@@ -279,7 +272,7 @@ function showTab(tab, btn) {
 
 ---
 
-### 6. Missing `email-validator` and `greenlet` dependencies
+### 5. Missing `email-validator` and `greenlet` dependencies
 
 **Error:** Pydantic's `EmailStr` requires `email-validator`, and SQLAlchemy async requires `greenlet`. Both were missing from `requirements.txt`.
 
@@ -323,9 +316,3 @@ function showTab(tab, btn) {
 | GET | `/api/admin/customers` | Admin | List customers |
 | PATCH | `/api/admin/customers/{id}` | Admin | Update customer |
 | DELETE | `/api/admin/customers/{id}` | Admin | Deactivate customer |
-
----
-
-## License
-
-MIT
