@@ -3,7 +3,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./ticket_system.db")
+# Vercel has a read-only filesystem except for /tmp
+if os.getenv("VERCEL"):
+    default_db = "sqlite+aiosqlite:///tmp/ticket_system.db"
+else:
+    default_db = "sqlite+aiosqlite:///./ticket_system.db"
+
+DATABASE_URL = os.getenv("DATABASE_URL", default_db)
 SECRET_KEY = os.getenv("SECRET_KEY", "a-very-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
