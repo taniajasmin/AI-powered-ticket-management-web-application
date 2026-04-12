@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TicketAI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Ticket<span>AI</span></div>
+        <ul class="nav-links" id="navLinks"></ul>
+        <div class="user-badge" id="userBadge"></div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Dashboard</h2>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="label">Total Tickets</div><div class="value" id="sTotal">-</div></div>
+            <div class="stat-card"><div class="label">Open</div><div class="value" id="sOpen" style="color:var(--info)">-</div></div>
+            <div class="stat-card"><div class="label">In Progress</div><div class="value" id="sProgress" style="color:var(--warning)">-</div></div>
+            <div class="stat-card"><div class="label">Resolved</div><div class="value" id="sResolved" style="color:var(--success)">-</div></div>
+            <div class="stat-card"><div class="label">Closed</div><div class="value" id="sClosed" style="color:var(--text-dim)">-</div></div>
+        </div>
+
+        <div class="page-header">
+            <h2>Recent Tickets</h2>
+            <a href="/static/tickets.html" class="btn btn-primary btn-sm">+ New Ticket</a>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Category</th><th>AI</th><th>Created</th>
+                    </tr>
+                </thead>
+                <tbody id="recentTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/nav.js"></script>
+    <script>
+        if (!getToken()) window.location.href = "/";
+        const user = getUser();
+        const isAdmin = user && user.role === "admin";
+
+        async function init() {
+            if (isAdmin) {
+                const stats = await api("/admin/dashboard");
+                if (stats) {
+                    document.getElementById("sTotal").textContent = stats.total_tickets;
+                    document.getElementById("sOpen").textContent = stats.open_tickets;
+                    document.getElementById("sProgress").textContent = stats.in_progress_tickets;
+                    document.getElementById("sResolved").textContent = stats.resolved_tickets;
+                    document.getElementById("sClosed").textContent = stats.closed_tickets;
+                }
+            } else {
+                const stats = await api("/tickets/stats");
+                if (stats) {
+                    document.getElementById("sTotal").textContent = stats.total;
+                    document.getElementById("sOpen").textContent = stats.by_status.open;
+                    document.getElementById("sProgress").textContent = stats.by_status.in_progress;
+                    document.getElementById("sResolved").textContent = stats.by_status.resolved;
+                    document.getElementById("sClosed").textContent = stats.by_status.closed;
+                }
+            }
+
+            const tickets = await api("/tickets?limit=10");
+            if (tickets) {
+                const tbody = document.getElementById("recentTable");
+                if (tickets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-dim)">No tickets yet. Click <strong>+ New Ticket</strong> to create one.</td></tr>';
+                } else {
+                    tbody.innerHTML = tickets.map(t => `
+                    <tr onclick="window.location.href='/static/ticket-detail.html?id=${t.id}'" style="cursor:pointer">
+                        <td>#${t.id}</td>
+                        <td>${t.title}</td>
+                        <td>${statusBadge(t.status)}</td>
+                        <td>${priorityBadge(t.priority)}</td>
+                        <td>${t.category || "-"}</td>
+                        <td>${t.ai_category ? `<span class="badge badge-ai">${t.ai_category} (${(t.ai_confidence*100).toFixed(0)}%)</span>` : "-"}</td>
+                        <td>${formatDate(t.created_at)}</td>
+                    </tr>
+                `).join("");
+                    }
+                }
+            }
+
+        init();
+    </script>
+</body>
+</html>

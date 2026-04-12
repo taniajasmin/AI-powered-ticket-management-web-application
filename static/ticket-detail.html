@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Detail - TicketAI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Ticket<span>AI</span></div>
+        <ul class="nav-links" id="navLinks"></ul>
+        <div class="user-badge" id="userBadge"></div>
+    </nav>
+
+    <div class="container">
+        <div style="margin-bottom:16px"><a href="/static/tickets.html">&larr; Back to tickets</a></div>
+        <div id="ticketContent">Loading...</div>
+    </div>
+
+    <!-- Update Modal -->
+    <div class="modal-overlay hidden" id="updateModal">
+        <div class="modal">
+            <h3>Update Ticket</h3>
+            <form onsubmit="updateTicket(event)">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="updStatus">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="updPriority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="updCategory">
+                        <option value="">Unset</option>
+                        <option value="billing">Billing</option>
+                        <option value="technical">Technical</option>
+                        <option value="account">Account</option>
+                        <option value="bug">Bug</option>
+                        <option value="feature_request">Feature Request</option>
+                        <option value="security">Security</option>
+                        <option value="general">General</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assign To</label>
+                    <select id="updAssign"><option value="">Unassigned</option></select>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:16px">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('updateModal').classList.add('hidden')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/nav.js"></script>
+    <script>
+        if (!getToken()) window.location.href = "/";
+
+        const params = new URLSearchParams(window.location.search);
+        const ticketId = params.get("id");
+        const user = getUser();
+        const isStaff = user.role === "admin";
+
+        async function loadTicket() {
+            const t = await api(`/tickets/${ticketId}`);
+            if (!t) return;
+
+            document.title = `#${t.id} ${t.title} - TicketAI`;
+
+            let updateBtn = isStaff
+                ? `<button class="btn btn-ghost btn-sm" onclick="openUpdate(${JSON.stringify(t).replace(/"/g, '&quot;')})">Edit</button>`
+                : "";
+
+            let deleteBtn = isStaff
+                ? `<button class="btn btn-danger btn-sm" onclick="deleteTicket()">Delete</button>`
+                : "";
+
+            document.getElementById("ticketContent").innerHTML = `
+                <div class="ticket-detail">
+                    <div class="ticket-main">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <h2>#${t.id} &mdash; ${t.title}</h2>
+                            <div style="display:flex;gap:8px">${updateBtn} ${deleteBtn}</div>
+                        </div>
+                        <div style="margin-top:4px">
+                            ${statusBadge(t.status)} ${priorityBadge(t.priority)}
+                            ${t.category ? `<span class="badge" style="background:var(--surface-hover)">${t.category}</span>` : ""}
+                        </div>
+                        <div class="description">${t.description}</div>
+
+                        <div class="ai-box">
+                            <h4>AI Classification</h4>
+                            <p>
+                                <strong>Category:</strong> ${t.ai_category || "N/A"} &nbsp;|&nbsp;
+                                <strong>Confidence:</strong> ${t.ai_confidence ? (t.ai_confidence * 100).toFixed(0) + "%" : "N/A"}
+                            </p>
+                            ${t.ai_analysis ? `<p style="margin-top:6px">${t.ai_analysis}</p>` : ""}
+                        </div>
+
+                        <div class="comments-section">
+                            <h3 style="margin-bottom:12px">Comments</h3>
+                            <div id="commentsList"></div>
+                            <div class="comment-form">
+                                <textarea id="commentText" placeholder="Add a comment..."></textarea>
+                                <div class="comment-form-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="addComment()">Post</button>
+                                    ${isStaff ? `<label><input type="checkbox" id="commentInternal"> Internal note</label>` : ""}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ticket-sidebar">
+                        <div class="meta-row"><span class="meta-label">Created by</span><span>${t.creator_name || "Unknown"}</span></div>
+                        <div class="meta-row"><span class="meta-label">Assigned to</span><span>${t.assignee_name || "Unassigned"}</span></div>
+                        <div class="meta-row"><span class="meta-label">Customer</span><span>${t.customer_name || "-"}</span></div>
+                        <div class="meta-row"><span class="meta-label">Created</span><span>${formatDate(t.created_at)}</span></div>
+                        <div class="meta-row"><span class="meta-label">Updated</span><span>${formatDate(t.updated_at)}</span></div>
+                        <div class="meta-row"><span class="meta-label">Comments</span><span>${t.comment_count}</span></div>
+                    </div>
+                </div>
+            `;
+
+            loadComments();
+        }
+
+        async function loadComments() {
+            const comments = await api(`/tickets/${ticketId}/comments`);
+            if (!comments) return;
+            const el = document.getElementById("commentsList");
+            el.innerHTML = comments.map(c => `
+                <div class="comment ${c.is_internal ? "comment-internal" : ""}">
+                    <div class="comment-header">
+                        <span class="comment-author">${c.author_name || "User"}</span>
+                        <span class="comment-time">${formatDate(c.created_at)}</span>
+                        ${c.is_internal ? '<span class="badge badge-in_progress" style="font-size:10px">INTERNAL</span>' : ""}
+                    </div>
+                    <div class="comment-body">${c.content}</div>
+                </div>
+            `).join("") || '<p style="color:var(--text-dim);font-size:14px">No comments yet.</p>';
+        }
+
+        async function addComment() {
+            const text = document.getElementById("commentText").value.trim();
+            if (!text) return;
+            const internal = document.getElementById("commentInternal")?.checked || false;
+            try {
+                await api(`/tickets/${ticketId}/comments`, {
+                    method: "POST",
+                    body: JSON.stringify({ content: text, is_internal: internal }),
+                });
+                document.getElementById("commentText").value = "";
+                loadComments();
+                showToast("Comment added");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        function openUpdate(ticket) {
+            const modal = document.getElementById("updateModal");
+            document.getElementById("updStatus").value = ticket.status;
+            document.getElementById("updPriority").value = ticket.priority;
+            document.getElementById("updCategory").value = ticket.category || "";
+            loadAgents(ticket.assigned_to);
+            modal.classList.remove("hidden");
+        }
+
+        async function loadAgents(currentAssign) {
+            if (user.role !== "admin") return;
+            const users = await api("/admin/users");
+            const admins = users.filter(u => u.role === "admin");
+            document.getElementById("updAssign").innerHTML =
+                '<option value="">Unassigned</option>' +
+                admins.map(a => `<option value="${a.id}" ${a.id === currentAssign ? "selected" : ""}>${a.full_name} (${a.role})</option>`).join("");
+        }
+
+        async function updateTicket(e) {
+            e.preventDefault();
+            const body = {};
+            body.status = document.getElementById("updStatus").value;
+            body.priority = document.getElementById("updPriority").value;
+            const cat = document.getElementById("updCategory").value;
+            if (cat) body.category = cat;
+            const assign = document.getElementById("updAssign").value;
+            if (assign) body.assigned_to = parseInt(assign);
+            else body.assigned_to = null;
+
+            try {
+                await api(`/tickets/${ticketId}`, { method: "PATCH", body: JSON.stringify(body) });
+                document.getElementById("updateModal").classList.add("hidden");
+                showToast("Ticket updated");
+                loadTicket();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function deleteTicket() {
+            if (!confirm("Delete this ticket?")) return;
+            await api(`/tickets/${ticketId}`, { method: "DELETE" });
+            window.location.href = "/static/tickets.html";
+        }
+
+        loadTicket();
+    </script>
+</body>
+</html>

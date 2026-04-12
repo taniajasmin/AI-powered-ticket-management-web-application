@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickets - TicketAI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Ticket<span>AI</span></div>
+        <ul class="nav-links" id="navLinks"></ul>
+        <div class="user-badge" id="userBadge"></div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Tickets</h2>
+            <button class="btn btn-primary btn-sm" onclick="openModal()">+ New Ticket</button>
+        </div>
+
+        <div class="filters">
+            <select id="filterStatus" onchange="loadTickets()">
+                <option value="">All Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+            </select>
+            <select id="filterPriority" onchange="loadTickets()">
+                <option value="">All Priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+            </select>
+            <select id="filterCategory" onchange="loadTickets()">
+                <option value="">All Categories</option>
+                <option value="billing">Billing</option>
+                <option value="technical">Technical</option>
+                <option value="account">Account</option>
+                <option value="bug">Bug</option>
+                <option value="feature_request">Feature Request</option>
+                <option value="security">Security</option>
+                <option value="general">General</option>
+            </select>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Category</th><th>AI Classification</th><th>Customer</th><th>Created</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketsTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Ticket Modal -->
+    <div class="modal-overlay hidden" id="createModal">
+        <div class="modal">
+            <h3>Create Ticket</h3>
+            <form onsubmit="createTicket(event)">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="newTitle" required placeholder="Brief summary of the issue">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="newDesc" required placeholder="Describe the issue in detail"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="newPriority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Customer (optional)</label>
+                    <select id="newCustomer">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:16px">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/nav.js"></script>
+    <script>
+        if (!getToken()) window.location.href = "/";
+
+        const user = getUser();
+        const isStaff = user.role === "admin";
+
+        function openModal() { document.getElementById("createModal").classList.remove("hidden"); loadCustomers(); }
+        function closeModal() { document.getElementById("createModal").classList.add("hidden"); }
+
+        async function loadCustomers() {
+            if (!isStaff) return;
+            const customers = await api("/admin/customers");
+            if (customers) {
+                document.getElementById("newCustomer").innerHTML =
+                    '<option value="">None</option>' +
+                    customers.map(c => `<option value="${c.id}">${c.name} (${c.company || c.email})</option>`).join("");
+            }
+        }
+
+        async function loadTickets() {
+            const params = new URLSearchParams();
+            const s = document.getElementById("filterStatus").value;
+            const p = document.getElementById("filterPriority").value;
+            const c = document.getElementById("filterCategory").value;
+            if (s) params.set("status", s);
+            if (p) params.set("priority", p);
+            if (c) params.set("category", c);
+
+            const tickets = await api(`/tickets?${params.toString()}`);
+            if (!tickets) return;
+
+            const tbody = document.getElementById("ticketsTable");
+            tbody.innerHTML = tickets.map(t => `
+                <tr onclick="window.location.href='/static/ticket-detail.html?id=${t.id}'" style="cursor:pointer">
+                    <td>#${t.id}</td>
+                    <td>${t.title}</td>
+                    <td>${statusBadge(t.status)}</td>
+                    <td>${priorityBadge(t.priority)}</td>
+                    <td>${t.category || "-"}</td>
+                    <td>${t.ai_category
+                        ? `<span class="badge badge-ai">${t.ai_category}</span> <small style="color:var(--text-dim)">${(t.ai_confidence*100).toFixed(0)}%</small>`
+                        : "-"}</td>
+                    <td>${t.customer_name || "-"}</td>
+                    <td>${formatDate(t.created_at)}</td>
+                </tr>
+            `).join("");
+        }
+
+        async function createTicket(e) {
+            e.preventDefault();
+            try {
+                const body = {
+                    title: document.getElementById("newTitle").value,
+                    description: document.getElementById("newDesc").value,
+                    priority: document.getElementById("newPriority").value,
+                };
+                const custId = document.getElementById("newCustomer").value;
+                if (custId) body.customer_id = parseInt(custId);
+
+                await api("/tickets", { method: "POST", body: JSON.stringify(body) });
+                showToast("Ticket created!");
+                closeModal();
+                loadTickets();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        loadTickets();
+    </script>
+</body>
+</html>

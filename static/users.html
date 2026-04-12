@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - TicketAI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Ticket<span>AI</span></div>
+        <ul class="nav-links" id="navLinks"></ul>
+        <div class="user-badge" id="userBadge"></div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>User Management</h2>
+        </div>
+
+        <div class="filters">
+            <select id="filterRole" onchange="loadUsers()">
+                <option value="">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="customer">Customer</option>
+            </select>
+            <select id="filterActive" onchange="loadUsers()">
+                <option value="">All</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="usersTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/nav.js"></script>
+    <script>
+        if (!getToken() || getUser().role !== "admin") window.location.href = "/";
+
+        async function loadUsers() {
+            const params = new URLSearchParams();
+            const r = document.getElementById("filterRole").value;
+            const a = document.getElementById("filterActive").value;
+            if (r) params.set("role", r);
+            if (a) params.set("is_active", a);
+
+            const users = await api(`/admin/users?${params.toString()}`);
+            if (!users) return;
+
+            document.getElementById("usersTable").innerHTML = users.map(u => `
+                <tr>
+                    <td>#${u.id}</td>
+                    <td>${u.full_name}</td>
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge badge-${u.role === 'admin' ? 'critical' : 'open'}">${u.role}</span></td>
+                    <td>${u.is_active
+                        ? '<span style="color:var(--success)">Active</span>'
+                        : '<span style="color:var(--danger)">Inactive</span>'}</td>
+                    <td>${formatDate(u.created_at)}</td>
+                    <td>
+                        <select onchange="changeRole(${u.id}, this.value)" style="padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px">
+                            <option value="admin" ${u.role==="admin"?"selected":""}>admin</option>
+                            <option value="customer" ${u.role==="customer"?"selected":""}>customer</option>
+                        </select>
+                        ${u.is_active
+                            ? `<button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="toggleActive(${u.id}, false)">Deactivate</button>`
+                            : `<button class="btn btn-success btn-sm" style="margin-left:4px" onclick="toggleActive(${u.id}, true)">Activate</button>`}
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        async function changeRole(userId, role) {
+            try {
+                await api(`/admin/users/${userId}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ role }),
+                });
+                showToast("Role updated");
+                loadUsers();
+            } catch (err) { showToast(err.message, "error"); }
+        }
+
+        async function toggleActive(userId, active) {
+            try {
+                await api(`/admin/users/${userId}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ is_active: active }),
+                });
+                showToast(active ? "User activated" : "User deactivated");
+                loadUsers();
+            } catch (err) { showToast(err.message, "error"); }
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>
