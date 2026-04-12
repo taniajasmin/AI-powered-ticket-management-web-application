@@ -4,6 +4,19 @@ A full-stack ticket management system built with **FastAPI** and **vanilla HTML/
 
 ---
 
+## Why This Project?
+
+This project was built to simulate a real-world support system where:
+
+- AI reduces manual triaging effort
+- Admins can prioritize issues faster
+- Customers get structured responses
+
+It demonstrates backend architecture, async programming, and AI integration.
+
+---
+
+
 ## Screenshots
 
 ### Login / Register Page
@@ -36,9 +49,10 @@ A full-stack ticket management system built with **FastAPI** and **vanilla HTML/
 - Admin dashboard with ticket statistics
 - Customer self-service portal
 - Internal comments (visible only to admins)
-- Dark-themed responsive UI
+- Dark-themed responsive UI with role-based navigation
 
 ---
+
 
 ## Tech Stack
 
@@ -52,6 +66,20 @@ A full-stack ticket management system built with **FastAPI** and **vanilla HTML/
 | **Server** | Uvicorn (ASGI) |
 
 ---
+
+
+## Architecture
+
+Frontend (HTML/JS)
+        ↓
+FastAPI Backend (API + Auth + Business Logic)
+        ↓
+SQLite Database (async SQLAlchemy)
+        ↓
+Gemini AI (ticket classification)
+
+---
+
 
 ## Project Structure
 
@@ -96,6 +124,7 @@ ticket/
 ```
 
 ---
+
 
 ## Getting Started
 
@@ -163,6 +192,7 @@ Use these accounts to explore the system:
 
 ---
 
+
 ## How It Works
 
 ### Ticket Lifecycle
@@ -201,7 +231,14 @@ classify_ticket(title, description) is called
 
 The AI result is stored on the ticket as `ai_category`, `ai_confidence`, and `ai_analysis`, and is visible in the ticket detail view.
 
+
+## AI Design Decisions
+
+- Used Gemini 2.5 Flash Lite for low latency + cost efficiency
+- Implemented fallback classification to ensure system reliability
+- AI is isolated in service layer → easily replaceable
 ---
+
 
 ## Errors Faced & Solutions
 
