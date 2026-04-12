@@ -7,13 +7,13 @@ A full-stack ticket management system built with **FastAPI** and **vanilla HTML/
 ## Screenshots
 
 ### Login / Register Page
-![Login Page](screenshots/login.png)
+![Login Page](screenshots/admin-users.png) 
 
 ### Admin Pages
 
 | Admin Dashboard | User Management |
 |----------------|----------------|
-| ![Admin](screenshots/admin-dashboard.png) | ![Users](screenshots/admin-users.png) |
+| ![Admin](screenshots/admin-dashboard.png) | | ![User](screenshots/login.png) 
 
 ### Customer Pages
 
