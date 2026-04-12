@@ -3,13 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Vercel has a read-only filesystem except for /tmp
-if os.getenv("VERCEL"):
-    default_db = "sqlite+aiosqlite:///tmp/ticket_system.db"
-else:
-    default_db = "sqlite+aiosqlite:///./ticket_system.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-DATABASE_URL = os.getenv("DATABASE_URL", default_db)
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is missing. Please add your Neon Postgres URL to your .env file!")
 
 # Ensure URLs from providers like Neon use the asyncpg driver
 if DATABASE_URL.startswith("postgres://"):
@@ -17,8 +14,13 @@ if DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+asyncpg://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-if "postgresql+asyncpg" in DATABASE_URL and "sslmode=" in DATABASE_URL:
+if "postgresql+asyncpg" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("sslmode=", "ssl=")
+    if "&channel_binding=" in DATABASE_URL:
+        # Strip out channel_binding entirely as asyncpg does not support it
+        DATABASE_URL = DATABASE_URL.split("&channel_binding=")[0]
+    elif "?channel_binding=" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.split("?channel_binding=")[0]
 
 
 SECRET_KEY = os.getenv("SECRET_KEY", "a-very-secret-key-change-in-production")
