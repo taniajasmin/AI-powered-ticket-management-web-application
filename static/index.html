@@ -12,11 +12,6 @@
             <h1>Ticket<span style="color:var(--primary)">AI</span></h1>
             <p class="subtitle">AI-Powered Ticket Management</p>
 
-            <div class="auth-tabs">
-                <button class="active" onclick="showTab('login', this)">Login</button>
-                <button onclick="showTab('register', this)">Register</button>
-            </div>
-
             <form id="loginForm" onsubmit="handleLogin(event)">
                 <div class="form-group">
                     <label>Username</label>
@@ -28,26 +23,10 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-full">Sign In</button>
             </form>
-
-            <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="regName" required placeholder="Your full name">
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="regEmail" required placeholder="you@email.com">
-                </div>
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="regUser" required placeholder="Choose a username">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="regPass" required minlength="6" placeholder="Min 6 characters">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
-            </form>
+            
+            <p style="text-align:center; margin-top:15px; font-size:14px; color:var(--text-light)">
+                Don't have an account? <a href="/static/register.html" style="color:var(--primary); text-decoration:none; font-weight:bold;">Register here</a>
+            </p>
 
             <div id="authError" style="color:var(--danger);font-size:13px;text-align:center;margin-top:12px;display:none"></div>
         </div>
@@ -56,14 +35,6 @@
     <script src="/static/app.js"></script>
     <script>
         if (getToken()) window.location.href = "/static/dashboard.html";
-
-        function showTab(tab, btn) {
-            document.querySelectorAll(".auth-tabs button").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            document.getElementById("loginForm").classList.toggle("hidden", tab !== "login");
-            document.getElementById("registerForm").classList.toggle("hidden", tab !== "register");
-            document.getElementById("authError").style.display = "none";
-        }
 
         function showErr(msg) {
             const el = document.getElementById("authError");
@@ -86,27 +57,6 @@
                 const user = await api("/auth/me");
                 localStorage.setItem("user", JSON.stringify(user));
                 window.location.href = "/static/dashboard.html";
-            } catch (err) {
-                showErr(err.message);
-            }
-        }
-
-        async function handleRegister(e) {
-            e.preventDefault();
-            try {
-                await api("/auth/register", {
-                    method: "POST",
-                    headers: {},
-                    body: JSON.stringify({
-                        full_name: document.getElementById("regName").value,
-                        email: document.getElementById("regEmail").value,
-                        username: document.getElementById("regUser").value,
-                        password: document.getElementById("regPass").value,
-                        role: "customer",
-                    }),
-                });
-                showToast("Account created! Please login.");
-                document.querySelector(".auth-tabs button").click();
             } catch (err) {
                 showErr(err.message);
             }
