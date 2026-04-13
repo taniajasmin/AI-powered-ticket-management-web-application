@@ -59,9 +59,10 @@ It demonstrates backend architecture, async programming, and AI integration.
 | Layer | Technology |
 |-------|-----------|
 | **Backend** | Python 3.12+, FastAPI, SQLAlchemy (async), Pydantic v2 |
-| **Database** | SQLite via aiosqlite (async) |
+| **Database** | SQLite via aiosqlite (async), PostgreSQL / Neon |
 | **Auth** | JWT (python-jose), bcrypt password hashing |
-| **AI** | Google Gemini 2.5 Flash Lite API |
+| **ORM** | SQLAlchemy|
+| **AI** | Custom classification service |
 | **Frontend** | Vanilla HTML, CSS, JavaScript (no framework) |
 | **Server** | Uvicorn (ASGI) |
 
